@@ -23,6 +23,9 @@ class I18nAttributeBehavior extends CActiveRecordBehavior
      */
     public $idAttribute = 'id';
 
+    /** @var I18nAttribute[][] */
+    private static $_models = array();
+
     /**
      * Translates the given attribute into the active language.
      * @param string $name name of the attribute.
@@ -43,14 +46,22 @@ class I18nAttributeBehavior extends CActiveRecordBehavior
      */
     protected function loadModel($name)
     {
-        return I18nAttribute::model()->findByAttributes(
-            array(
-                'locale' => Yii::app()->language,
-                'modelClass' => get_class($this->owner),
-                'modelId' => $this->resolveModelId(),
-                'attribute' => $name,
-            )
-        );
+        $modelClass = get_class($this->owner);
+        if (!isset(self::$_models[$modelClass])) {
+            $criteria = new CDbCriteria;
+            $criteria->addCondition('locale=:locale');
+            $criteria->addCondition('modelClass=:modelClass');
+            $criteria->addCondition('attribute=:attribute');
+            $criteria->index = 'modelId';
+            $criteria->params = array(
+                ':locale' => Yii::app()->language,
+                ':modelClass' => $modelClass,
+                ':attribute' => $name,
+            );
+            self::$_models[$modelClass] = I18nAttribute::model()->findAll($criteria);
+        }
+        $modelId = $this->resolveModelId;
+        return isset(self::$_models[$modelClass][$modelId]) ? self::$_models[$modelClass][$modelId] : null;
     }
 
     /**
@@ -60,10 +71,10 @@ class I18nAttributeBehavior extends CActiveRecordBehavior
      */
     protected function resolveModelId()
     {
-        if ($this->owner->hasAttribute($this->idAttribute)) {
-            return $this->owner->{$this->idAttribute};
+        if (!$this->owner->hasAttribute($this->idAttribute)) {
+            throw new CException(sprintf('Owner does not have a "%s" column.', $this->idAttribute));
         }
-        throw new CException(sprintf('Owner does not have a "%s" column.', $this->idAttribute));
+        return $this->owner->{$this->idAttribute};
     }
 
     /**
