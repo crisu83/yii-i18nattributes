@@ -60,7 +60,7 @@ class I18nAttributeBehavior extends CActiveRecordBehavior
             );
             self::$_models[$modelClass] = I18nAttribute::model()->findAll($criteria);
         }
-        $modelId = $this->resolveModelId;
+        $modelId = $this->resolveModelId();
         return isset(self::$_models[$modelClass][$modelId]) ? self::$_models[$modelClass][$modelId] : null;
     }
 
